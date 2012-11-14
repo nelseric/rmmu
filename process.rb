@@ -5,18 +5,19 @@ class RKernel
 
   PHYSICAL_SIZE = 4096
   PAGE_SIZE = 512
-  PD_SIZE = 10240
+  SWAP_SIZE = 10240
+  TLB_SIZE = 4
 
-  attr_reader :mem, :vmem, :process_list
+  attr_reader :mem, :swap, :process_list, :tlb
 
   def initialize
     @mem = Memory.new(PHYSICAL_SIZE, PAGE_SIZE)
-    @vmem = VirtualMemory.new(PD_SIZE, PAGE_SIZE)
+    @swap = SwapMemory.new(SWAP_SIZE, PAGE_SIZE)
+    @tlb = TLB.new(TLB_SIZE)
     @process_list = []
   end
 
   def op(args)
-    p args
     case (args[:op])
       when :alloc
         @process_list[args[:pid]] = RProcess.new args[:pid], args[:text], args[:data]
@@ -57,17 +58,21 @@ class RProcess
 
   end
 
+  # @param [Integer] Process local address of memory
   def read(addr)
 
   end
 
-  def write(offset)
+  # @param [Integer] Process local address of memory
+  def write(addr)
 
   end
 end
 
 
 class Memory
+  attr_accessor :frame_table
+
   def initialize(size = 4096, page_size = 512)
     @size = size
     @page_size = 512
@@ -81,7 +86,7 @@ class Memory
   end
 
   def dealloc_page(page)
-    @frame_table.delete page
+    @frame_table.delete RKernel.instance.tlb.lookup(page)
   end
 
   def free_frame
@@ -94,7 +99,45 @@ class Memory
   end
 end
 
-class VirtualMemory
+class TLB
+  def initialize(size = 4)
+
+    @tlb = {}
+    @lru = []
+    @size = size
+  end
+
+  def lookup(page)
+
+    (0...@size).each do | |
+      if @tlb[page] != nil
+        return @tlb[page]
+      end
+    end
+    #LRU Miss
+    RKernel.instance.mem.frame_table.each do |k, v|
+      if v == page
+        set(page, k)
+        return   @tlb[page]
+      end
+    end
+    raise PageFault
+  end
+
+  def set(key, value)
+    @tlb.delete(@lru.pop) if @lru.size >= @size
+    @tlb[key] = value
+    lru_update(key)
+  end
+
+  private
+  def lru_update(key)
+    @lru.unshift(@lru.delete(key)|| key)
+  end
+
+end
+
+class SwapMemory
   def initialize(size = 10240, page_size = 512)
 
   end
@@ -108,6 +151,10 @@ class Page
     @id = descr
   end
 
+  def to_s
+    @id
+  end
+
   def read
 
   end
@@ -115,4 +162,9 @@ class Page
   def write
 
   end
+end
+
+
+class PageFault < Exception
+
 end
