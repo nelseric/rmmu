@@ -1,6 +1,7 @@
 require "./lib/kernel"
 require "sinatra"
 require "erb"
+require "pp"
 
 
 if __FILE__ == $0
@@ -8,6 +9,7 @@ if __FILE__ == $0
     tapef = File.open ARGV[0], "r"
     tape = tapef.read
     RKernel.instance.feed tape
+
   else
     print "Usage: #{$0} (tape file name)"
     exit

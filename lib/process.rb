@@ -1,5 +1,9 @@
 require_relative "./kernel"
 
+
+# The process page table is a simple ordered array, with the pages stored in segment order
+# When reading, the offset is calculated and the Page object is read. With the page object,
+# you can read the page, or deallocate it
 class RProcess
 
   attr_accessor :pid, :page_table
@@ -8,8 +12,11 @@ class RProcess
     @page_table = []
     @pid = pid
 
+    #number of pages in each section
     data_p = (Float(data) / RKernel::PAGE_SIZE).ceil
     text_p = (Float(text) / RKernel::PAGE_SIZE).ceil
+
+    #create pages in order
     (0...text_p).each do |i|
       p = RKernel.instance.mem.alloc_page
       p.id = "P#{pid} Text #{i}"
@@ -20,6 +27,7 @@ class RProcess
       p.id = "P#{pid} Data #{i}"
       @page_table.push p
     end
+    # memory page offsets in the page table
     @text_os = 0
     @data_os = text_p
   end
@@ -38,7 +46,10 @@ class RProcess
     end
   end
 
-  def write(seg, offset, size)
 
-  end
+  # There isn't really a distinction between reads and writes in this system
+  alias :write :read
+  #def write(seg, offset, size)
+  #
+  #end
 end
